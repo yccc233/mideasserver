@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python test_routes.py:*)",
+      "Bash(python -c:*)",
+      "Bash(ls:*)",
+      "Bash(sqlite3:*)",
+      "Bash(python src/database/inspect_db.py:*)",
+      "Bash(python src/database/init_agent_schedule_task.py:*)",
+      "Bash(python test_router.py:*)",
+      "Bash(python test_all_routes.py:*)",
+      "Bash(wc:*)",
+      "Bash(timeout 5 python:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(python test_fixes.py:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
+    ]
+  }
+}

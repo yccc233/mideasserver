@@ -1,0 +1,60 @@
+更新init
+
+帮我检视整个项目代码，代码结构和技术路线是否正规和通用，如有不对，帮忙指正。
+
+更新接口：{{baseUrl}}/mideasserver/task/agentTasks
+返回任务列表，及total的值
+
+src/api/task.py中的接口太复杂了，简化几个，保留增删改查四类接口
+
+现在加一个接口：/mideasserver/task/addAgentTask，
+接口作用：给智能体添加一个定时任务，
+传参为task_name,task_info,task_conf,task_prompt。
+其中，task_conf为配置任务执行时间，参考定时任务的格式，输入一个字符串，如（“*;*;*;*”，“月；日；周；时”，或者其他更合适的方案，需求为每天的6、8点，每周日晚8点）
+入表为参数以及task_status(0/1，开关),insert_time，update_time（时间格式均为2026-02-19 23:25）
+最后在api.http中添加测试接口
+
+
+优化下src/database目录下的代码逻辑，太复杂了，只要sqlite3访问数据库即可，而且后续表很多的情况下，代码量也要随时更改，过于繁琐
+
+
+在src/database目录下建立数据库及访问工具（已有一个sqlite3的数据文件）
+
+
+添加logger日志机制，
+机制：
+1、日志写入到/work/logs/MIdeasServer目录
+2、目录下的日志为mideasserver.log，以10MB为限制，滚动复写的形式覆盖日志文件，最多滚10个文件，如
+mideasserver.log
+mideasserver.log.1
+mideasserver.log.2
+...
+mideasserver.log.9
+3、将现有的接口均写入日志，日志等级设置为info
+
+
+路由层级改造：
+### GPT Research 接口
+GET {{baseUrl}}/mideasserver/agent/gptresearch
+
+### GPT Research 状态
+GET {{baseUrl}}/mideasserver/agent/gptresearch/status
+
+上述两个接口仍然报错：
+
+{
+  "detail": "Not Found"
+}
+
+帮我实现一个功能，
+所有的url路由均从src目录中开始，除了mideasserver，比如说接口/mideasserver/agent/gptresearch，
+其中mideasserver是个固定路由，/agent/是文件目录，类似于controller，
+gptresearch是接口的实现名字。
+
+
+
+
+改进：
+1、写一个src/test/api.http文件，用于校验http请求
+
+

@@ -1,0 +1,135 @@
+### 环境变量
+@baseUrl = http://localhost:18888
+
+
+
+
+### 健康检查
+GET {{baseUrl}}/health
+
+### 获取根端点
+GET {{baseUrl}}/
+
+### ========== Agent 相关接口 ==========
+
+### GPT Research 接口
+GET {{baseUrl}}/mideasserver/agent/gptresearch
+
+### GPT Research 状态
+GET {{baseUrl}}/mideasserver/agent/gptresearch/status
+
+### 嵌套 API 示例
+GET {{baseUrl}}/mideasserver/agent/sub/nested
+
+### 创建项目
+POST {{baseUrl}}/mideasserver/agent/sub/nested/create
+
+### ========== User 相关接口 ==========
+
+### 获取用户信息
+GET {{baseUrl}}/mideasserver/user/profile
+
+### 更新用户信息
+POST {{baseUrl}}/mideasserver/user/profile/update
+
+### 删除用户
+DELETE {{baseUrl}}/mideasserver/user/profile
+
+### ========== 基础任务接口 ==========
+
+### 获取所有任务
+GET {{baseUrl}}/mideasserver/tasks
+
+### 获取单个任务
+GET {{baseUrl}}/mideasserver/tasks/1
+
+### 创建任务
+POST {{baseUrl}}/mideasserver/tasks
+Content-Type: application/json
+
+{
+  "task_name": "测试任务"
+}
+
+### 更新任务
+PUT {{baseUrl}}/mideasserver/tasks/1
+Content-Type: application/json
+
+{
+  "task_name": "更新后的任务名称"
+}
+
+### 删除任务
+DELETE {{baseUrl}}/mideasserver/tasks/1
+
+### ========== 智能体定时任务接口 ==========
+
+### 获取所有智能体定时任务
+GET {{baseUrl}}/mideasserver/task/agentTasks
+
+### 获取单个智能体定时任务
+GET {{baseUrl}}/mideasserver/task/agentTasks/1
+
+### 创建智能体定时任务（每天6点和8点执行）
+POST {{baseUrl}}/mideasserver/task/agentTasks
+Content-Type: application/json
+
+{
+  "task_name": "每日数据统计",
+  "task_info": "统计每日用户活跃数据",
+  "task_conf": "6,8 * * *",
+  "task_prompt": "请统计昨日的用户活跃数据并生成报告",
+  "task_status": 1
+}
+
+### 创建智能体定时任务（每周日晚8点执行）
+POST {{baseUrl}}/mideasserver/task/agentTasks
+Content-Type: application/json
+
+{
+  "task_name": "周报生成",
+  "task_info": "生成本周工作周报",
+  "task_conf": "20 * * 0",
+  "task_prompt": "请生成本周的工作周报，包含关键指标和重要事件",
+  "task_status": 1
+}
+
+### 创建智能体定时任务（每月1号早9点执行）
+POST {{baseUrl}}/mideasserver/task/agentTasks
+Content-Type: application/json
+
+{
+  "task_name": "月度报告",
+  "task_info": "生成月度运营报告",
+  "task_conf": "9 1 * *",
+  "task_prompt": "请生成上月的运营报告，包含数据分析和趋势预测",
+  "task_status": 1
+}
+
+### 更新智能体定时任务（更新任务名称和状态）
+PUT {{baseUrl}}/mideasserver/task/agentTasks/1
+Content-Type: application/json
+
+{
+  "task_name": "每日数据统计（已更新）",
+  "task_status": 0
+}
+
+### 更新智能体定时任务（只更新状态）
+PUT {{baseUrl}}/mideasserver/agentTasks/1
+Content-Type: application/json
+
+{
+  "task_status": 1
+}
+
+### 更新智能体定时任务（更新执行时间配置）
+PUT {{baseUrl}}/mideasserver/agentTasks/1
+Content-Type: application/json
+
+{
+  "task_conf": "7,9,18 * * *"
+}
+
+### 删除智能体定时任务
+DELETE {{baseUrl}}/mideasserver/agentTasks/1
