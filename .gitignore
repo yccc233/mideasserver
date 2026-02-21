@@ -47,3 +47,7 @@ logs/
 .cache/
 .pytest_cache/
 .mypy_cache/
+
+# SQLite WAL 文件
+*.db-shm
+*.db-wal

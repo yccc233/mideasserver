@@ -27,9 +27,6 @@ python main.py
 # 启动开发服务器（默认端口 18889）
 python main.py
 
-# 初始化智能体定时任务表
-python src/database/init_agent_schedule_task.py
-
 # 查看数据库结构
 python src/database/inspect_db.py
 ```
@@ -65,30 +62,59 @@ python src/database/inspect_db.py
    - 默认限制：100 次/分钟
    - 各端点可自定义限制（使用 `@limiter.limit()` 装饰器）
 
-### 数据库表结构
-
-- `tbl_agent_task_manage`: 基础任务表（task_id, task_name）
-- `tbl_agent_schedule_task`: 智能体定时任务表
-  - task_conf 格式：`时 日 月 周`（类似 cron 但简化为 4 个字段）
-  - 示例：`"6,8 * * *"` = 每天 6 点和 8 点，`"20 * * 0"` = 每周日晚 8 点
-
 ### API 路由结构
 
-所有 API 路由前缀为 `/mideasserver`，后跟文件路径：
-- `/mideasserver/task/*` - 任务管理接口（基础任务 + 智能体定时任务）
-- `/mideasserver/agent/*` - Agent 相关接口（GPT Research）
+**重要规范**：所有接口统一使用 POST 方法，参数通过 request body 传递。
+
+所有 API 路由前缀为 `/mideasserver`，后跟文件路径。
+
+#### 智能体定时任务接口 (`/mideasserver/task`)
+- `POST /agentTasks/list` - 获取所有定时任务（60次/分钟）
+- `POST /agentTasks/get` - 获取单个定时任务（60次/分钟），body: `{task_id}`
+- `POST /agentTasks/create` - 创建定时任务（20次/分钟），body: `{task_name, task_conf, ...}`
+- `POST /agentTasks/update` - 更新定时任务（30次/分钟），body: `{task_id, ...}`
+- `POST /agentTasks/delete` - 删除定时任务（20次/分钟），body: `{task_id}`
+
+#### Agent 接口 (`/mideasserver/agent`)
+- `POST /gptresearch` - GPT Research 接口（1次/分钟）
 
 ## 开发规范
 
 ### 添加新的 API 端点
 
+**重要规范**：所有接口必须使用 POST 方法，参数通过 request body 传递。
+
 1. 在 `src/api/` 下创建新的 Python 文件（或在现有文件中添加）
 2. 创建 `APIRouter` 实例并命名为 `router`
-3. 使用 `@router.get/post/put/delete` 装饰器定义端点
-4. 添加 `@limiter.limit()` 装饰器设置速率限制
-5. 端点函数第一个参数必须是 `request: Request`（slowapi 要求）
-6. 使用 Pydantic BaseModel 定义请求/响应模型
-7. 路由会自动加载，无需手动注册
+3. 导入必要的依赖：
+   ```python
+   from fastapi import APIRouter, Request
+   from slowapi import Limiter
+   from slowapi.util import get_remote_address
+
+   router = APIRouter()
+   limiter = Limiter(key_func=get_remote_address)
+   ```
+4. 使用 `@router.post()` 装饰器定义端点（统一使用 POST 方法）
+5. 添加 `@limiter.limit()` 装饰器设置速率限制
+6. 端点函数第一个参数必须是 `request: Request`（slowapi 要求）
+7. 使用 Pydantic BaseModel 定义请求模型，所有参数通过 body 传递
+8. 路由会自动加载，无需手动注册
+
+**示例**：
+```python
+from pydantic import BaseModel
+
+class TaskQuery(BaseModel):
+    task_id: int
+
+@router.post("/tasks/get")
+@limiter.limit("60/minute")
+async def get_task(request: Request, query: TaskQuery):
+    """获取单个任务"""
+    task = db.get_by_id("table_name", "task_id", query.task_id)
+    return {"code": 0, "data": task, "message": "查询成功"}
+```
 
 ### 数据库操作
 
