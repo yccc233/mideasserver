@@ -50,7 +50,7 @@ cp .env.example .env
 主要配置项：
 - `APP_NAME`: 应用名称
 - `HOST`: 服务器地址（默认 0.0.0.0）
-- `PORT`: 服务器端口（默认 18889）
+- `PORT`: 服务器端口（默认 18888）
 - `DEBUG`: 调试模式
 - `LOG_DIR`: 日志目录路径
 
@@ -60,7 +60,7 @@ cp .env.example .env
 # 启动开发服务器
 python main.py
 
-# 服务将在 http://localhost:18889 启动
+# 服务将在 http://localhost:18888 启动
 ```
 
 ### 初始化数据库
@@ -98,8 +98,8 @@ mideasserver/
 ## API 文档
 
 启动服务后访问：
-- Swagger UI: http://localhost:18889/docs
-- ReDoc: http://localhost:18889/redoc
+- Swagger UI: http://localhost:18888/docs
+- ReDoc: http://localhost:18888/redoc
 
 ### 主要端点
 
