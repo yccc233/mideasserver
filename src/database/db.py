@@ -27,7 +27,7 @@ class Database:
             db_path = Path(__file__).parent / "Mideas.db"
         self.db_path = str(db_path)
         self._local = threading.local()
-        logger.info(f"数据库初始化: {self.db_path}")
+        logger.debug(f"数据库初始化: {self.db_path}")
 
     def _get_connection(self) -> sqlite3.Connection:
         """获取线程本地连接（复用连接）"""
@@ -168,30 +168,40 @@ class Database:
         results = self.query(sql, (id_value,))
         return results[0] if results else None
 
-    def get_all(self, table: str, order_by: str = None) -> List[Dict[str, Any]]:
+    def get_all(self, table: str, where: str = None, params: tuple = None, order_by: str = None, limit: int = None, offset: int = None) -> List[Dict[str, Any]]:
         """
         获取表中所有记录
 
         Args:
             table: 表名
+            where: WHERE 条件（可选，如 "task_status = 1"）
+            params: WHERE 条件参数（可选）
             order_by: 排序字段（如 "id DESC"）
+            limit: 返回记录数量限制
+            offset: 偏移量
 
         Returns:
             记录列表
         """
         sql = f"SELECT * FROM {table}"
+        if where:
+            sql += f" WHERE {where}"
         if order_by:
             sql += f" ORDER BY {order_by}"
-        return self.query(sql)
+        if limit is not None:
+            sql += f" LIMIT {limit}"
+        if offset is not None:
+            sql += f" OFFSET {offset}"
+        return self.query(sql, params)
 
-    def count(self, table: str, where: str = None, where_params: tuple = None) -> int:
+    def count(self, table: str, where: str = None, params: tuple = None) -> int:
         """
         统计记录数
 
         Args:
             table: 表名
             where: WHERE 条件（可选）
-            where_params: WHERE 条件参数
+            params: WHERE 条件参数
 
         Returns:
             记录数
@@ -199,7 +209,7 @@ class Database:
         sql = f"SELECT COUNT(*) as count FROM {table}"
         if where:
             sql += f" WHERE {where}"
-        result = self.query(sql, where_params)
+        result = self.query(sql, params)
         return result[0]["count"] if result else 0
 
 

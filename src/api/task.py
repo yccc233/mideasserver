@@ -6,14 +6,24 @@ from typing import Optional
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from src.database import db
 from src.logger import logger
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+# 延迟导入 limiter（避免重复创建导致编码问题）
+limiter = None
+
+def _get_limiter():
+    global limiter
+    if limiter is None:
+        from main import limiter as main_limiter
+        limiter = main_limiter
+    return limiter
+
+# 确保 limiter 在模块加载时可用
+limiter = _get_limiter()
 
 
 # ==================== 数据模型 ====================
@@ -45,6 +55,14 @@ class AgentScheduleTaskQuery(BaseModel):
 class AgentScheduleTaskDelete(BaseModel):
     """删除智能体定时任务请求"""
     task_id: int = Field(..., description="任务ID")
+
+
+class AgentTaskLogQuery(BaseModel):
+    """查询任务执行日志请求"""
+    task_id: Optional[int] = Field(None, description="任务ID（可选，不传则查询所有）")
+    status: Optional[int] = Field(None, description="执行状态（0:执行中 1:成功 2:失败）")
+    limit: int = Field(100, description="返回记录数量限制")
+    offset: int = Field(0, description="偏移量")
 
 
 # ==================== 智能体定时任务接口 ====================
@@ -165,3 +183,132 @@ async def delete_agent_task(request: Request, task: AgentScheduleTaskDelete):
     if rows == 0:
         return {"code": 404, "message": "任务不存在"}
     return {"code": 0, "message": "删除成功"}
+
+
+# ==================== 任务执行日志接口 ====================
+
+@router.post("/agentTasks/logs")
+@limiter.limit("60/minute")
+async def get_agent_task_logs(request: Request, query: AgentTaskLogQuery):
+    """
+    查询任务执行日志
+
+    支持按任务ID和执行状态筛选，支持分页
+    """
+    logger.info(f"查询任务执行日志: task_id={query.task_id}, status={query.status}")
+
+    # 构建查询条件
+    where_clauses = []
+    params = []
+
+    if query.task_id is not None:
+        where_clauses.append("task_id = ?")
+        params.append(query.task_id)
+
+    if query.status is not None:
+        where_clauses.append("status = ?")
+        params.append(query.status)
+
+    where = " AND ".join(where_clauses) if where_clauses else None
+
+    # 查询日志
+    logs = db.get_all(
+        "tbl_agent_task_log",
+        where=where,
+        params=tuple(params) if params else None,
+        order_by="start_time DESC",
+        limit=query.limit,
+        offset=query.offset
+    )
+
+    # 统计总数
+    total = db.count("tbl_agent_task_log", where=where, params=tuple(params) if params else None)
+
+    return {
+        "code": 0,
+        "data": {
+            "list": logs,
+            "total": total,
+            "limit": query.limit,
+            "offset": query.offset
+        },
+        "message": "查询成功"
+    }
+
+
+@router.post("/agentTasks/logs/latest")
+@limiter.limit("60/minute")
+async def get_latest_task_log(request: Request, query: AgentScheduleTaskQuery):
+    """获取指定任务的最新执行日志"""
+    logger.info(f"查询任务最新执行日志 ID: {query.task_id}")
+
+    logs = db.get_all(
+        "tbl_agent_task_log",
+        where="task_id = ?",
+        params=(query.task_id,),
+        order_by="start_time DESC",
+        limit=1
+    )
+
+    if not logs:
+        return {"code": 404, "message": "未找到执行日志"}
+
+    return {"code": 0, "data": logs[0], "message": "查询成功"}
+
+
+@router.post("/agentTasks/logs/stats")
+@limiter.limit("60/minute")
+async def get_task_log_stats(request: Request, query: AgentScheduleTaskQuery):
+    """获取指定任务的执行统计信息"""
+    logger.info(f"查询任务执行统计 ID: {query.task_id}")
+
+    # 查询所有日志
+    logs = db.get_all(
+        "tbl_agent_task_log",
+        where="task_id = ?",
+        params=(query.task_id,)
+    )
+
+    if not logs:
+        return {
+            "code": 0,
+            "data": {
+                "total_executions": 0,
+                "success_count": 0,
+                "failure_count": 0,
+                "running_count": 0,
+                "avg_duration": 0,
+                "last_execution": None
+            },
+            "message": "暂无执行记录"
+        }
+
+    # 统计数据
+    total = len(logs)
+    success = sum(1 for log in logs if log.get("status") == 1)
+    failure = sum(1 for log in logs if log.get("status") == 2)
+    running = sum(1 for log in logs if log.get("status") == 0)
+
+    # 计算平均执行时长（仅统计已完成的任务）
+    completed_logs = [log for log in logs if log.get("execution_duration") is not None]
+    avg_duration = sum(log.get("execution_duration", 0) for log in completed_logs) / len(completed_logs) if completed_logs else 0
+
+    # 最后一次执行
+    last_log = logs[0] if logs else None
+
+    return {
+        "code": 0,
+        "data": {
+            "total_executions": total,
+            "success_count": success,
+            "failure_count": failure,
+            "running_count": running,
+            "avg_duration": round(avg_duration, 2),
+            "last_execution": {
+                "start_time": last_log.get("start_time"),
+                "status": last_log.get("status"),
+                "duration": last_log.get("execution_duration")
+            } if last_log else None
+        },
+        "message": "查询成功"
+    }

@@ -15,7 +15,19 @@
       "Bash(taskkill:*)",
       "Bash(python test_fixes.py:*)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(source .venv/Scripts/activate)",
+      "Bash(python test_scheduler.py:*)",
+      "Bash(python test_task_log.py:*)",
+      "Bash(iconv:*)",
+      "Bash(pip show:*)",
+      "Bash(python test_gptr_config.py:*)",
+      "Bash(python test_gptr_quick.py:*)",
+      "Bash(python test_deepseek_api.py:*)",
+      "Bash(python init_task_execution.py:*)",
+      "Bash(timeout 25 python:*)",
+      "Bash(timeout 15 python:*)",
+      "Bash(timeout 3 python:*)"
     ]
   }
 }

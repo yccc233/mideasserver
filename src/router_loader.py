@@ -59,7 +59,7 @@ def load_routers(base_path: str, prefix: str = "") -> list[APIRouter]:
             # 查找 router 对象
             if hasattr(module, "router") and isinstance(module.router, APIRouter):
                 routers.append((prefix + route_prefix, module.router))
-                logger.info(f"加载路由: {prefix + route_prefix}")
+                logger.debug(f"加载路由: {prefix + route_prefix}")
             else:
                 logger.warning(f"模块 {item} 中未找到 router 对象")
         except Exception as e:

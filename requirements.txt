@@ -5,3 +5,5 @@ pydantic-settings==2.1.0
 python-dotenv==1.0.0
 slowapi==0.1.9
 gpt-researcher
+sentence-transformers>=2.2.0
+torch>=2.0.0

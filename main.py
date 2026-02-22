@@ -2,13 +2,9 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# 设置环境变量禁用 slowapi 自动读取 .env（避免 Windows 编码问题）
-os.environ.setdefault("SLOWAPI_DISABLE_DOTENV", "1")
-
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import time
@@ -19,25 +15,58 @@ from src.logger import logger
 from src.router_loader import load_routers
 
 
+# 初始化速率限制器（延迟导入，避免读取 .env 文件时的编码问题）
+# 临时重命名 .env 文件
+env_file = Path(__file__).parent / ".env"
+env_backup = Path(__file__).parent / ".env.backup"
+env_exists = env_file.exists()
+
+if env_exists:
+    env_file.rename(env_backup)
+
+try:
+    from slowapi import Limiter
+
+    limiter = Limiter(
+        key_func=get_remote_address,
+        default_limits=["100/minute"],
+        storage_uri="memory://"
+    )
+finally:
+    # 恢复 .env 文件
+    if env_exists:
+        env_backup.rename(env_file)
+
+
 # 应用启动和关闭事件
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 启动事件
     logger.info(f"{settings.app_name} 启动")
     logger.info(f"服务器地址: {settings.host}:{settings.port}")
+
+    # 启动智能体定时任务调度器
+    from src.process.agent import scheduler
+    import asyncio
+    scheduler_task = asyncio.create_task(scheduler.run())
+    logger.info("智能体定时任务调度器已启动")
+
     yield
+
     # 关闭事件
+    # 停止调度器
+    scheduler.stop()
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("智能体定时任务调度器已停止")
+
+    # 关闭数据库连接
     from src.database import db
     db.close_connection()
     logger.info(f"{settings.app_name} 关闭")
-
-
-# 初始化速率限制器
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["100/minute"],
-    storage_uri="memory://"
-)
 
 
 # 创建 FastAPI 应用
@@ -120,18 +149,18 @@ app.add_middleware(
 async def log_requests(request: Request, call_next):
     start_time = time.time()
 
-    # 记录请求信息
-    logger.info(f"请求开始: {request.method} {request.url.path}")
-
     # 处理请求
     response = await call_next(request)
 
     # 计算处理时间
     process_time = time.time() - start_time
-    logger.info(
-        f"请求完成: {request.method} {request.url.path} - "
-        f"状态码: {response.status_code} - 耗时: {process_time:.3f}s"
-    )
+
+    # 只记录非健康检查的请求
+    if request.url.path not in ["/health", "/"]:
+        logger.info(
+            f"{request.method} {request.url.path} - "
+            f"状态: {response.status_code} - 耗时: {process_time:.3f}s"
+        )
 
     return response
 
@@ -140,7 +169,6 @@ async def log_requests(request: Request, call_next):
 @app.get("/health")
 @limiter.limit("30/minute")
 async def health_check(request: Request):
-    logger.info("健康检查")
     return {"code": 0, "status": "ok"}
 
 
@@ -148,7 +176,6 @@ async def health_check(request: Request):
 @app.get("/")
 @limiter.limit("30/minute")
 async def root(request: Request):
-    logger.info("访问根端点")
     return {"code": 0, "message": "欢迎使用 Mideas 应用"}
 
 

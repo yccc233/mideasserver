@@ -5,12 +5,22 @@ Agent 相关接口
 - GPT Research 接口
 """
 from fastapi import APIRouter, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from src.logger import logger
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+# 延迟导入 limiter（避免重复创建导致编码问题）
+limiter = None
+
+def _get_limiter():
+    global limiter
+    if limiter is None:
+        from main import limiter as main_limiter
+        limiter = main_limiter
+    return limiter
+
+# 确保 limiter 在模块加载时可用
+limiter = _get_limiter()
 
 
 @router.post("/gptresearch")
