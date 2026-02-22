@@ -61,8 +61,13 @@ class AgentTaskLogQuery(BaseModel):
     """查询任务执行日志请求"""
     task_id: Optional[int] = Field(None, description="任务ID（可选，不传则查询所有）")
     status: Optional[int] = Field(None, description="执行状态（0:执行中 1:成功 2:失败）")
-    limit: int = Field(100, description="返回记录数量限制")
-    offset: int = Field(0, description="偏移量")
+    size: int = Field(100, description="每页数量")
+    start: int = Field(0, description="起始位置（从0开始）")
+
+
+class TaskExecutionQuery(BaseModel):
+    """查询任务执行记录详情请求"""
+    execution_id: int = Field(..., description="执行记录ID")
 
 
 # ==================== 智能体定时任务接口 ====================
@@ -187,11 +192,11 @@ async def delete_agent_task(request: Request, task: AgentScheduleTaskDelete):
 
 # ==================== 任务执行日志接口 ====================
 
-@router.post("/agentTasks/logs")
+@router.post("/agentTasks/getExecutionList")
 @limiter.limit("60/minute")
 async def get_agent_task_logs(request: Request, query: AgentTaskLogQuery):
     """
-    查询任务执行日志
+    获取任务执行历史列表
 
     支持按任务ID和执行状态筛选，支持分页
     """
@@ -211,26 +216,26 @@ async def get_agent_task_logs(request: Request, query: AgentTaskLogQuery):
 
     where = " AND ".join(where_clauses) if where_clauses else None
 
-    # 查询日志
+    # 查询日志（使用新表 tbl_task_execution）
     logs = db.get_all(
-        "tbl_agent_task_log",
+        "tbl_task_execution",
         where=where,
         params=tuple(params) if params else None,
         order_by="start_time DESC",
-        limit=query.limit,
-        offset=query.offset
+        limit=query.size,
+        offset=query.start
     )
 
     # 统计总数
-    total = db.count("tbl_agent_task_log", where=where, params=tuple(params) if params else None)
+    total = db.count("tbl_task_execution", where=where, params=tuple(params) if params else None)
 
     return {
         "code": 0,
         "data": {
             "list": logs,
             "total": total,
-            "limit": query.limit,
-            "offset": query.offset
+            "size": query.size,
+            "start": query.start
         },
         "message": "查询成功"
     }
@@ -243,7 +248,7 @@ async def get_latest_task_log(request: Request, query: AgentScheduleTaskQuery):
     logger.info(f"查询任务最新执行日志 ID: {query.task_id}")
 
     logs = db.get_all(
-        "tbl_agent_task_log",
+        "tbl_task_execution",
         where="task_id = ?",
         params=(query.task_id,),
         order_by="start_time DESC",
@@ -256,15 +261,33 @@ async def get_latest_task_log(request: Request, query: AgentScheduleTaskQuery):
     return {"code": 0, "data": logs[0], "message": "查询成功"}
 
 
+@router.post("/agentTasks/getExecutionDetail")
+@limiter.limit("60/minute")
+async def get_task_execution_detail(request: Request, query: TaskExecutionQuery):
+    """
+    根据执行ID获取任务执行记录详情
+
+    返回完整的执行记录信息，包括完整报告内容（result_detail）
+    """
+    logger.info(f"查询任务执行记录详情 execution_id: {query.execution_id}")
+
+    execution = db.get_by_id("tbl_task_execution", "execution_id", query.execution_id)
+
+    if not execution:
+        return {"code": 404, "message": "执行记录不存在"}
+
+    return {"code": 0, "data": execution, "message": "查询成功"}
+
+
 @router.post("/agentTasks/logs/stats")
 @limiter.limit("60/minute")
 async def get_task_log_stats(request: Request, query: AgentScheduleTaskQuery):
     """获取指定任务的执行统计信息"""
     logger.info(f"查询任务执行统计 ID: {query.task_id}")
 
-    # 查询所有日志
+    # 查询所有日志（使用新表 tbl_task_execution）
     logs = db.get_all(
-        "tbl_agent_task_log",
+        "tbl_task_execution",
         where="task_id = ?",
         params=(query.task_id,)
     )
@@ -305,6 +328,7 @@ async def get_task_log_stats(request: Request, query: AgentScheduleTaskQuery):
             "running_count": running,
             "avg_duration": round(avg_duration, 2),
             "last_execution": {
+                "execution_id": last_log.get("execution_id"),
                 "start_time": last_log.get("start_time"),
                 "status": last_log.get("status"),
                 "duration": last_log.get("execution_duration")

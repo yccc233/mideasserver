@@ -249,9 +249,225 @@
 
 ---
 
-### 2. Agent 接口
+### 2. 任务执行记录管理
 
-#### 2.1 GPT Research
+#### 2.1 获取任务执行历史列表
+
+**接口地址**: `POST /mideasserver/task/agentTasks/getExecutionList`
+
+**速率限制**: 60次/分钟
+
+**请求参数**:
+```json
+{
+  "task_id": 1,
+  "status": 1,
+  "size": 10,
+  "start": 0
+}
+```
+
+**参数说明**:
+- `task_id`: 任务ID（可选，不传则查询所有任务的执行记录）
+- `status`: 执行状态（可选）
+  - `0`: 运行中
+  - `1`: 成功
+  - `2`: 失败
+- `size`: 每页数量（必填，默认100）
+- `start`: 起始位置，从0开始（必填，默认0）
+
+**分页说明**:
+- 第1页：`start=0, size=10`（第1-10条）
+- 第2页：`start=10, size=10`（第11-20条）
+- 第3页：`start=20, size=10`（第21-30条）
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "data": {
+    "list": [
+      {
+        "execution_id": 1,
+        "task_id": 1,
+        "task_name": "每日报告",
+        "task_prompt": "生成昨日数据统计报告",
+        "status": 1,
+        "start_time": "2026-02-22 06:00:00",
+        "end_time": "2026-02-22 06:05:30",
+        "execution_duration": 330,
+        "result_summary": "报告生成成功，共分析了1000条数据...",
+        "result_detail": "完整的报告内容...",
+        "error_message": null,
+        "error_detail": null,
+        "created_at": "2026-02-22 06:00:00",
+        "updated_at": "2026-02-22 06:05:30"
+      }
+    ],
+    "total": 50,
+    "size": 10,
+    "start": 0
+  },
+  "message": "查询成功"
+}
+```
+
+---
+
+#### 2.2 获取任务执行记录详情
+
+**接口地址**: `POST /mideasserver/task/agentTasks/getExecutionDetail`
+
+**速率限制**: 60次/分钟
+
+**请求参数**:
+```json
+{
+  "execution_id": 1
+}
+```
+
+**参数说明**:
+- `execution_id`: 执行记录ID（必填）
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "data": {
+    "execution_id": 1,
+    "task_id": 1,
+    "task_name": "每日报告",
+    "task_prompt": "生成昨日数据统计报告",
+    "status": 1,
+    "start_time": "2026-02-22 06:00:00",
+    "end_time": "2026-02-22 06:05:30",
+    "execution_duration": 330,
+    "result_summary": "报告生成成功，共分析了1000条数据...",
+    "result_detail": "# 每日数据统计报告\n\n## 概述\n...\n完整的报告内容（Markdown格式）",
+    "error_message": null,
+    "error_detail": null,
+    "created_at": "2026-02-22 06:00:00",
+    "updated_at": "2026-02-22 06:05:30"
+  },
+  "message": "查询成功"
+}
+```
+
+**错误响应**:
+```json
+{
+  "code": 404,
+  "message": "执行记录不存在"
+}
+```
+
+---
+
+#### 2.3 获取任务最新执行日志
+
+**接口地址**: `POST /mideasserver/task/agentTasks/logs/latest`
+
+**速率限制**: 60次/分钟
+
+**请求参数**:
+```json
+{
+  "task_id": 1
+}
+```
+
+**参数说明**:
+- `task_id`: 任务ID（必填）
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "data": {
+    "execution_id": 5,
+    "task_id": 1,
+    "task_name": "每日报告",
+    "task_prompt": "生成昨日数据统计报告",
+    "status": 1,
+    "start_time": "2026-02-22 08:00:00",
+    "end_time": "2026-02-22 08:04:15",
+    "execution_duration": 255,
+    "result_summary": "报告生成成功...",
+    "result_detail": "完整报告内容...",
+    "error_message": null,
+    "error_detail": null,
+    "created_at": "2026-02-22 08:00:00",
+    "updated_at": "2026-02-22 08:04:15"
+  },
+  "message": "查询成功"
+}
+```
+
+**错误响应**:
+```json
+{
+  "code": 404,
+  "message": "未找到执行日志"
+}
+```
+
+---
+
+#### 2.4 获取任务执行统计
+
+**接口地址**: `POST /mideasserver/task/agentTasks/logs/stats`
+
+**速率限制**: 60次/分钟
+
+**请求参数**:
+```json
+{
+  "task_id": 1
+}
+```
+
+**参数说明**:
+- `task_id`: 任务ID（必填）
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "data": {
+    "total_executions": 50,
+    "success_count": 48,
+    "failure_count": 1,
+    "running_count": 1,
+    "avg_duration": 285.5,
+    "last_execution": {
+      "execution_id": 50,
+      "start_time": "2026-02-22 08:00:00",
+      "status": 1,
+      "duration": 255
+    }
+  },
+  "message": "查询成功"
+}
+```
+
+**字段说明**:
+- `total_executions`: 总执行次数
+- `success_count`: 成功次数
+- `failure_count`: 失败次数
+- `running_count`: 运行中次数
+- `avg_duration`: 平均执行时长（秒）
+- `last_execution`: 最后一次执行信息
+  - `execution_id`: 执行记录ID
+  - `start_time`: 开始时间
+  - `status`: 执行状态
+  - `duration`: 执行时长（秒）
+
+---
+
+### 3. Agent 接口
+
+#### 3.1 GPT Research
 
 **接口地址**: `POST /mideasserver/agent/gptresearch`
 
@@ -317,6 +533,31 @@ curl -X POST http://localhost:18888/mideasserver/task/agentTasks/update \
 curl -X POST http://localhost:18888/mideasserver/task/agentTasks/delete \
   -H "Content-Type: application/json" \
   -d '{"task_id": 1}'
+
+# 获取任务执行历史列表
+curl -X POST http://localhost:18888/mideasserver/task/agentTasks/getExecutionList \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_id": 1,
+    "status": 1,
+    "size": 10,
+    "start": 0
+  }'
+
+# 获取任务执行记录详情
+curl -X POST http://localhost:18888/mideasserver/task/agentTasks/getExecutionDetail \
+  -H "Content-Type: application/json" \
+  -d '{"execution_id": 1}'
+
+# 获取任务最新执行日志
+curl -X POST http://localhost:18888/mideasserver/task/agentTasks/logs/latest \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": 1}'
+
+# 获取任务执行统计
+curl -X POST http://localhost:18888/mideasserver/task/agentTasks/logs/stats \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": 1}'
 ```
 
 ### Python 示例
@@ -360,6 +601,50 @@ print(response.json())
 # 删除定时任务
 response = requests.post(
     f"{base_url}/task/agentTasks/delete",
+    json={"task_id": 1}
+)
+print(response.json())
+
+# 获取任务执行历史列表（第1页）
+response = requests.post(
+    f"{base_url}/task/agentTasks/getExecutionList",
+    json={
+        "task_id": 1,
+        "status": 1,
+        "size": 10,
+        "start": 0
+    }
+)
+print(response.json())
+
+# 获取任务执行历史列表（第2页）
+response = requests.post(
+    f"{base_url}/task/agentTasks/getExecutionList",
+    json={
+        "task_id": 1,
+        "size": 10,
+        "start": 10
+    }
+)
+print(response.json())
+
+# 获取任务执行记录详情
+response = requests.post(
+    f"{base_url}/task/agentTasks/getExecutionDetail",
+    json={"execution_id": 1}
+)
+print(response.json())
+
+# 获取任务最新执行日志
+response = requests.post(
+    f"{base_url}/task/agentTasks/logs/latest",
+    json={"task_id": 1}
+)
+print(response.json())
+
+# 获取任务执行统计
+response = requests.post(
+    f"{base_url}/task/agentTasks/logs/stats",
     json={"task_id": 1}
 )
 print(response.json())

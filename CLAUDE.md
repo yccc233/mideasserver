@@ -107,7 +107,8 @@ python run_task.py
 - `POST /agentTasks/create` - 创建定时任务（20次/分钟），body: `{task_name, task_conf, ...}`
 - `POST /agentTasks/update` - 更新定时任务（30次/分钟），body: `{task_id, ...}`
 - `POST /agentTasks/delete` - 删除定时任务（20次/分钟），body: `{task_id}`
-- `POST /agentTasks/logs` - 查询任务执行日志（60次/分钟），body: `{task_id?, status?, limit, offset}`
+- `POST /agentTasks/getExecutionList` - 获取任务执行历史列表（60次/分钟），body: `{task_id?, status?, size, start}`
+- `POST /agentTasks/getExecutionDetail` - 根据执行ID获取详细信息（60次/分钟），body: `{execution_id}`
 - `POST /agentTasks/logs/latest` - 获取任务最新执行日志（60次/分钟），body: `{task_id}`
 - `POST /agentTasks/logs/stats` - 获取任务执行统计（60次/分钟），body: `{task_id}`
 

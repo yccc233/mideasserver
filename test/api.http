@@ -133,3 +133,80 @@ Content-Type: application/json
 
 ### 删除智能体定时任务
 DELETE {{baseUrl}}/mideasserver/agentTasks/1
+
+### ========== 任务执行记录接口 ==========
+
+### 获取任务执行历史列表（查询所有）
+POST {{baseUrl}}/mideasserver/task/agentTasks/getExecutionList
+Content-Type: application/json
+
+{
+  "size": 10,
+  "start": 0
+}
+
+### 获取任务执行历史列表（按任务ID查询）
+POST {{baseUrl}}/mideasserver/task/agentTasks/getExecutionList
+Content-Type: application/json
+
+{
+  "task_id": 1,
+  "size": 10,
+  "start": 0
+}
+
+### 获取任务执行历史列表（按状态查询：成功）
+POST {{baseUrl}}/mideasserver/task/agentTasks/getExecutionList
+Content-Type: application/json
+
+{
+  "status": 1,
+  "size": 10,
+  "start": 0
+}
+
+### 获取任务执行历史列表（按任务ID和状态查询）
+POST {{baseUrl}}/mideasserver/task/agentTasks/getExecutionList
+Content-Type: application/json
+
+{
+  "task_id": 1,
+  "status": 1,
+  "size": 20,
+  "start": 0
+}
+
+### 获取任务执行历史列表（第二页）
+POST {{baseUrl}}/mideasserver/task/agentTasks/getExecutionList
+Content-Type: application/json
+
+{
+  "task_id": 1,
+  "size": 10,
+  "start": 10
+}
+
+### 获取任务执行记录详情
+POST {{baseUrl}}/mideasserver/task/agentTasks/getExecutionDetail
+Content-Type: application/json
+
+{
+  "execution_id": 1
+}
+
+### 获取任务最新执行日志
+POST {{baseUrl}}/mideasserver/task/agentTasks/logs/latest
+Content-Type: application/json
+
+{
+  "task_id": 1
+}
+
+### 获取任务执行统计
+POST {{baseUrl}}/mideasserver/task/agentTasks/logs/stats
+Content-Type: application/json
+
+{
+  "task_id": 1
+}
+
